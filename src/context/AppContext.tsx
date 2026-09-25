@@ -291,14 +291,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
       let data: any = null;
       try {
-        data = await res.json();
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: text.slice(0, 150) || `Server returned HTTP ${res.status}` };
+        }
       } catch {
         showToast(`Server connection error (${res.status}). Please check deployment.`, 'error');
         setLoading(false);
         return false;
       }
       if (!res.ok) {
-        showToast(data?.error || 'Invalid phone number or password', 'error');
+        showToast(data?.error || data?.message || `Error ${res.status}: Authentication failed`, 'error');
         setLoading(false);
         return false;
       }

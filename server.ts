@@ -206,7 +206,9 @@ export async function createExpressApp() {
   api.use(async (req, res, next) => {
     try {
       if (req.method === 'GET' || req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
-        await refreshStateFromMongo(false);
+        await refreshStateFromMongo(false).catch((e) => {
+          console.warn('[MongoDB] Background sync warning:', e?.message || e);
+        });
       }
     } catch {
       // Continue with in-memory state if network times out
@@ -277,7 +279,9 @@ export async function createExpressApp() {
 
   // Get full state (for fast client hydration)
   api.get('/state', async (req, res) => {
-    await refreshStateFromMongo(false);
+    try {
+      await refreshStateFromMongo(false).catch(() => {});
+    } catch {}
     res.json({
       products: db.products,
       users: db.users.map((u) => {
@@ -295,8 +299,10 @@ export async function createExpressApp() {
 
   // Auth: Login
   api.post('/auth/login', async (req, res) => {
-    await refreshStateFromMongo(false);
-    const { phone, password } = req.body;
+    try {
+      await refreshStateFromMongo(false).catch(() => {});
+    } catch {}
+    const { phone, password } = req.body || {};
     const user = db.users.find((u) => u.phone === phone?.trim());
 
     if (!user) {
@@ -1052,19 +1058,14 @@ export async function createExpressApp() {
 
   // Graceful database error handling fallback middleware
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (
-      err.name === 'MongooseError' ||
-      err.name === 'MongoNetworkError' ||
-      err.name === 'MongoServerSelectionError' ||
-      (err.message && (err.message.includes('buffering timed out') || err.message.includes('ECONNREFUSED') || err.message.includes('timed out')))
-    ) {
-      console.warn('[AI Studio] Database offline or unreachable — continuing with local state');
-      if (req.method === 'GET') {
-        return res.json(req.path.endsWith('s') || req.path.endsWith('s/') ? [] : {});
-      }
-      return res.status(503).json({ error: 'Database service temporarily unavailable (running in local mode)' });
+    console.error('[API Error]:', err?.message || err);
+    if (res.headersSent) {
+      return next(err);
     }
-    next(err);
+    return res.status(err.status || 500).json({
+      error: err?.message || 'Internal Server Error. Please check database configuration.',
+      details: err?.name,
+    });
   });
 
   return app;
