@@ -289,9 +289,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phone.trim(), password: pass.trim() }),
       });
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        showToast(`Server connection error (${res.status}). Please check deployment.`, 'error');
+        setLoading(false);
+        return false;
+      }
       if (!res.ok) {
-        showToast(data.error || 'Invalid phone number or password', 'error');
+        showToast(data?.error || 'Invalid phone number or password', 'error');
         setLoading(false);
         return false;
       }
@@ -302,7 +309,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLoading(false);
       return true;
     } catch (err: any) {
-      showToast('Network error while connecting to authentication service', 'error');
+      showToast(err.message || 'Network error while connecting to authentication service', 'error');
       setLoading(false);
       return false;
     }
@@ -316,9 +323,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const resData = await res.json();
+      let resData: any = null;
+      try {
+        resData = await res.json();
+      } catch {
+        showToast(`Server connection error (${res.status})`, 'error');
+        setLoading(false);
+        return false;
+      }
       if (!res.ok) {
-        showToast(resData.error || 'Registration failed', 'error');
+        showToast(resData?.error || 'Registration failed', 'error');
         setLoading(false);
         return false;
       }
@@ -327,7 +341,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLoading(false);
       return true;
     } catch (err: any) {
-      showToast('Registration error occurred', 'error');
+      showToast(err.message || 'Registration error occurred', 'error');
       setLoading(false);
       return false;
     }

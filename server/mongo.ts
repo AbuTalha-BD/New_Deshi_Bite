@@ -186,10 +186,10 @@ export async function connectMongo(customUri?: string): Promise<{ success: boole
         // ignore
       }
 
-      // Optimized timeouts for serverless / cloud deployments
+      // Optimized timeouts for serverless / cloud deployments (fails fast if IP is blocked instead of hanging)
       const client = new MongoClient(uriToUse, {
-        serverSelectionTimeoutMS: 10000,
-        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 3500,
+        connectTimeoutMS: 3500,
         retryWrites: true,
         maxPoolSize: 10,
         minPoolSize: 0,
